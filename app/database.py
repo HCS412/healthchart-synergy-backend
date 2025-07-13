@@ -11,6 +11,10 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+# Ensure the DATABASE_URL uses asyncpg driver
+if not settings.database_url.startswith("postgresql+asyncpg://"):
+    settings.database_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
+
 engine = create_async_engine(settings.database_url, echo=False)
 AsyncSessionLocal = sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
