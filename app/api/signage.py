@@ -24,3 +24,24 @@ def get_room_signage(room_id: str):
         "staff": staff_in_room,
         "alerts": room_alerts
     }
+
+@router.get("/all")
+def get_all_signage():
+    rooms = room_store.get_all_rooms()
+    badge_locations = badge_store.get_badge_locations()
+    alerts = alert_logic.get_alert_history()
+
+    signage_data = []
+
+    for room in rooms:
+        staff_in_room = [badge_id for badge_id, r_id in badge_locations.items() if r_id == room.id]
+        room_alerts = [a for a in alerts if a.room_id == room.id]
+
+        signage_data.append({
+            "room": room,
+            "staff": staff_in_room,
+            "alerts": room_alerts
+        })
+
+    return signage_data
+
