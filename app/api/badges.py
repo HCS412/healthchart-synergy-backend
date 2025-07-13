@@ -1,20 +1,23 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from app.models.badge import BadgeEvent
-from app.services import badge_store
+from app.services.badge_store import record_badge_event, get_badge_locations, get_badge_log
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.database import get_db
 
 router = APIRouter()
 
 @router.post("/", tags=["Badge Reader"])
-def badge_event(event: BadgeEvent):
-    return badge_store.record_badge_event(event)
+async def badge_event(event: BadgeEvent, db: AsyncSession = Depends(get_db)):
+    return await record_badge_event(db, event)
 
 @router.get("/{badge_id}/location", tags=["Badge Reader"])
-def current_location(badge_id: str):
-    return badge_store.get_badge_location(badge_id)
+async def current_location(badge_id: str, db: AsyncSession = Depends(get_db)):
+    locations = await get_badge_locations(db)
+    return {"badge_id": badge_id, "location": locations.get(badge_id)}
 
 @router.get("/{badge_id}/log", tags=["Badge Reader"])
-def badge_log(badge_id: str):
-    log = badge_store.get_badge_log(badge_id)
+async def badge_log(badge_id: str, db: AsyncSession = Depends(get_db)):
+    log = await get_badge_log(db, badge_id)
     if not log:
         raise HTTPException(status_code=404, detail="No badge history found")
     return log
