@@ -1,8 +1,27 @@
-from app.models.event import Event
+import uuid
+from sqlalchemy.orm import Session
+from app.models.event import Event, EventDB
 from app.models.room import Room
+from app.database import SessionLocal
 from app.services import room_store
 
-def handle_event(event: Event) -> dict:
+def handle_event(event: Event):
+    with SessionLocal() as db:
+        # Log event to DB
+        db_event = EventDB(
+            id=str(uuid.uuid4()),
+            type=event.type,
+            room_id=event.room_id,
+            target_room_id=event.target_room_id,
+            patient_name=event.patient_name,
+            fall_risk=event.fall_risk,
+            isolation=event.isolation,
+            timestamp=event.timestamp
+        )
+        db.add(db_event)
+        db.commit()
+
+    # Update room state (same logic as before)
     if event.type == "admit":
         room_store.update_room(Room(
             id=event.room_id,
@@ -24,7 +43,6 @@ def handle_event(event: Event) -> dict:
         return {"message": f"Room {event.room_id} marked as vacant"}
 
     elif event.type == "transfer":
-        # Mark current room vacant
         room_store.update_room(Room(
             id=event.room_id,
             status="vacant",
@@ -33,7 +51,6 @@ def handle_event(event: Event) -> dict:
             isolation=False
         ))
 
-        # Occupy target room
         target_id = event.target_room_id or "Unspecified"
         room_store.update_room(Room(
             id=target_id,
@@ -43,6 +60,3 @@ def handle_event(event: Event) -> dict:
             isolation=event.isolation
         ))
         return {"message": f"Patient transferred from {event.room_id} to {target_id}"}
-
-    else:
-        return {"error": "Unknown event type"}
