@@ -1,49 +1,60 @@
-from sqlalchemy.orm import Session
+from typing import List
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.room import Room, RoomDB
-from app.database import SessionLocal
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_all_rooms(db: AsyncSession) -> List[Room]:
+    result = await db.execute("SELECT * FROM rooms")
+    return [Room(**row) for row in result.mappings().all()]
 
-def get_all_rooms():
-    with SessionLocal() as db:
-        return db.query(RoomDB).all()
+async def get_room_by_id(db: AsyncSession, room_id: str) -> Room | None:
+    result = await db.execute("SELECT * FROM rooms WHERE id = :id", {"id": room_id})
+    row = result.mappings().first()
+    return Room(**row) if row else None
 
-def get_room_by_id(room_id: str):
-    with SessionLocal() as db:
-        return db.query(RoomDB).filter(RoomDB.id == room_id).first()
+async def update_room(db: AsyncSession, room: Room) -> Room:
+    db_room = await db.execute("SELECT * FROM rooms WHERE id = :id", {"id": room.id})
+    db_room = db_room.mappings().first()
+    if db_room:
+        await db.execute(
+            """
+            UPDATE rooms
+            SET status = :status, fall_risk = :fall_risk, isolation = :isolation, patient_name = :patient_name
+            WHERE id = :id
+            """,
+            {
+                "id": room.id,
+                "status": room.status,
+                "fall_risk": room.fall_risk,
+                "isolation": room.isolation,
+                "patient_name": room.patient_name
+            }
+        )
+    else:
+        await db.execute(
+            """
+            INSERT INTO rooms (id, status, fall_risk, isolation, patient_name)
+            VALUES (:id, :status, :fall_risk, :isolation, :patient_name)
+            """,
+            {
+                "id": room.id,
+                "status": room.status,
+                "fall_risk": room.fall_risk,
+                "isolation": room.isolation,
+                "patient_name": room.patient_name
+            }
+        )
+    await db.commit()
+    result = await db.execute("SELECT * FROM rooms WHERE id = :id", {"id": room.id})
+    return Room(**result.mappings().first())
 
-def update_room(room: Room):
-    with SessionLocal() as db:
-        db_room = db.query(RoomDB).filter(RoomDB.id == room.id).first()
-        if db_room:
-            # Update existing
-            db_room.status = room.status
-            db_room.fall_risk = room.fall_risk
-            db_room.isolation = room.isolation
-            db_room.patient_name = room.patient_name
-        else:
-            # Create new
-            db_room = RoomDB(**room.dict())
-            db.add(db_room)
-        db.commit()
-        db.refresh(db_room)
-        return db_room
+async def delete_room(db: AsyncSession, room_id: str) -> bool:
+    result = await db.execute("SELECT * FROM rooms WHERE id = :id", {"id": room_id})
+    if result.mappings().first():
+        await db.execute("DELETE FROM rooms WHERE id = :id", {"id": room_id})
+        await db.commit()
+        return True
+    return False
 
-def delete_room(room_id: str):
-    with SessionLocal() as db:
-        db_room = db.query(RoomDB).filter(RoomDB.id == room_id).first()
-        if db_room:
-            db.delete(db_room)
-            db.commit()
-            return True
-        return False
-
-def clear_all_rooms():
-    with SessionLocal() as db:
-        db.query(RoomDB).delete()
-        db.commit()
+async def clear_all_rooms(db: AsyncSession):
+    await db.execute("DELETE FROM rooms")
+    await db.commit()
