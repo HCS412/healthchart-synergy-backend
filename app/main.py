@@ -1,14 +1,16 @@
 from fastapi import FastAPI
 from app.api import rooms, events, badges, alerts
 from app.database import Base, engine
-Base.metadata.create_all(bind=engine)
-
 
 app = FastAPI(
     title="HealthChart Synergy Backend",
     version="0.1.0",
     description="Powers smart signage, badge tracking, room orchestration, and alerts"
 )
+
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
 
 # Register routers
 app.include_router(rooms.router, prefix="/rooms", tags=["Rooms"])
