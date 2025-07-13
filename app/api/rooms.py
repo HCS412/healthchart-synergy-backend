@@ -1,13 +1,14 @@
 from fastapi import APIRouter
 from typing import List
 from app.models.room import Room
+from app.services.room_store import get_all_rooms, update_room
 
 router = APIRouter()
 
 @router.get("/rooms", response_model=List[Room])
 def get_rooms():
-    return [
-        Room(id="101", status="occupied", fall_risk=True, isolation=True),
-        Room(id="102", status="vacant", fall_risk=False),
-        Room(id="103", status="cleaning", fall_risk=False)
-    ]
+    return get_all_rooms()
+
+@router.post("/rooms/update", response_model=Room)
+def update_room_info(room: Room):
+    return update_room(room)
