@@ -1,15 +1,24 @@
-from typing import Dict
+from typing import Dict, List
 from app.models.room import Room
 
-# In-memory room store
-room_store: Dict[str, Room] = {
-    "101": Room(id="101", status="occupied", fall_risk=True, isolation=False),
-    "102": Room(id="102", status="vacant", fall_risk=False, isolation=False)
-}
+# In-memory store of rooms
+room_store: Dict[str, Room] = {}
 
-def get_all_rooms():
+def get_all_rooms() -> List[Room]:
     return list(room_store.values())
 
-def update_room(room: Room):
+def get_room_by_id(room_id: str) -> Room | None:
+    return room_store.get(room_id)
+
+def update_room(room: Room) -> Room:
     room_store[room.id] = room
     return room
+
+def delete_room(room_id: str) -> bool:
+    if room_id in room_store:
+        del room_store[room_id]
+        return True
+    return False
+
+def clear_all_rooms():
+    room_store.clear()
