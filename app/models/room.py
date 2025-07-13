@@ -1,7 +1,9 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class Room(BaseModel):
     id: str
-    status: str  # could be "occupied", "vacant", "cleaning", etc.
-    fall_risk: bool
-    isolation: bool = False  # optional, defaults to False
+    status: str  # "occupied", "vacant", "cleaning", etc.
+    fall_risk: bool = False
+    isolation: bool = False
+    patient_name: Optional[str] = None
