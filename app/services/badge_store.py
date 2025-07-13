@@ -1,26 +1,37 @@
-from typing import Dict, List
-from app.models.badge import BadgeEvent
-
-# badge_id -> list of badge events (for audit trail)
-badge_logs: Dict[str, List[BadgeEvent]] = {}
-
-# badge_id -> current room or None
-badge_locations: Dict[str, str | None] = {}
+import uuid
+from sqlalchemy.orm import Session
+from app.models.badge import BadgeEventDB, BadgeEvent
+from app.database import SessionLocal
 
 def record_badge_event(event: BadgeEvent):
-    # Track audit trail
-    badge_logs.setdefault(event.badge_id, []).append(event)
-
-    # Update location
-    if event.type == "in":
-        badge_locations[event.badge_id] = event.room_id
-    else:
-        badge_locations[event.badge_id] = None
-
-    return {"message": f"Badge {event.type} event recorded", "badge_id": event.badge_id}
+    with SessionLocal() as db:
+        event_id = str(uuid.uuid4())
+        db_event = BadgeEventDB(
+            id=event_id,
+            badge_id=event.badge_id,
+            room_id=event.room_id,
+            type=event.type,
+            timestamp=event.timestamp
+        )
+        db.add(db_event)
+        db.commit()
+        return {"message": f"Badge {event.type} recorded", "badge_id": event.badge_id}
 
 def get_badge_location(badge_id: str):
-    return {"badge_id": badge_id, "location": badge_locations.get(badge_id)}
+    with SessionLocal() as db:
+        event = (
+            db.query(BadgeEventDB)
+            .filter(BadgeEventDB.badge_id == badge_id)
+            .order_by(BadgeEventDB.timestamp.desc())
+            .first()
+        )
+        return {"badge_id": badge_id, "location": event.room_id if event and event.type == "in" else None}
 
 def get_badge_log(badge_id: str):
-    return badge_logs.get(badge_id, [])
+    with SessionLocal() as db:
+        return (
+            db.query(BadgeEventDB)
+            .filter(BadgeEventDB.badge_id == badge_id)
+            .order_by(BadgeEventDB.timestamp.desc())
+            .all()
+        )
