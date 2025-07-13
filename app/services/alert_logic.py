@@ -1,43 +1,31 @@
 import uuid
 from typing import List
+from fastapi import BackgroundTasks
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.alert import Alert, AlertDB
-from app.services import room_store
-from sqlalchemy.orm import Session
-from app.database import SessionLocal
-from app.services import badge_store
+from app.services.room_store import get_all_rooms
+from app.services.badge_store import get_badge_locations
+from app.services.fall_risk_alert import check_fall_risk_alert
+from app.services.isolation_alert import check_isolation_alert
 
-def scan_for_alerts() -> List[Alert]:
-    alerts: List[Alert] = []
-    room_map = {r.id: r for r in room_store.get_all_rooms()}
-    badge_locations = badge_store.get_badge_locations()  # returns badge_id → room_id
+async def scan_for_alerts(db: AsyncSession, background_tasks: BackgroundTasks) -> List[Alert]:
+    async def process_alerts():
+        alerts = []
+        room_map = {r.id: r for r in await get_all_rooms(db)}
+        badge_locations = await get_badge_locations(db)
 
-    # Reverse lookup: room_id → staff
-    room_staff_map = {}
-    for badge_id, room_id in badge_locations.items():
-        if room_id:
-            room_staff_map.setdefault(room_id, []).append(badge_id)
+        room_staff_map = {}
+        for badge_id, room_id in badge_locations.items():
+            if room_id:
+                room_staff_map.setdefault(room_id, []).append(badge_id)
 
-    for room_id, room in room_map.items():
-        staff_present = room_staff_map.get(room_id, [])
+        for room_id, room in room_map.items():
+            staff_present = room_staff_map.get(room_id, [])
+            if room.fall_risk and not staff_present:
+                alerts.extend(await check_fall_risk_alert(room, db))
+            if room.isolation and len(staff_present) > 1:
+                alerts.extend(await check_isolation_alert(room, staff_present, db))
 
-        if room.fall_risk and not staff_present:
-            alerts.append(Alert(
-                type="fall_risk_unattended",
-                severity="high",
-                room_id=room_id,
-                message=f"Fall-risk patient in room {room_id} has no staff present."
-            ))
-
-        if room.isolation and len(staff_present) > 1:
-            alerts.append(Alert(
-                type="isolation_breach",
-                severity="medium",
-                room_id=room_id,
-                message=f"Isolation protocol potentially breached in room {room_id}."
-            ))
-
-    # Save alerts to DB
-    with SessionLocal() as db:
         for alert in alerts:
             db_alert = AlertDB(
                 id=str(uuid.uuid4()),
@@ -48,10 +36,12 @@ def scan_for_alerts() -> List[Alert]:
                 timestamp=alert.timestamp
             )
             db.add(db_alert)
-        db.commit()
+        await db.commit()
+        return alerts
 
-    return alerts
+    background_tasks.add_task(process_alerts)
+    return []
 
-def get_alert_history() -> List[AlertDB]:
-    with SessionLocal() as db:
-        return db.query(AlertDB).order_by(AlertDB.timestamp.desc()).all()
+async def get_alert_history(db: AsyncSession) -> List[Alert]:
+    result = await db.execute("SELECT * FROM alerts ORDER BY timestamp DESC")
+    return [Alert(**row) for row in result.mappings().all()]
