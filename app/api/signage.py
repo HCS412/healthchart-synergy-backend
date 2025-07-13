@@ -1,23 +1,27 @@
-from fastapi import APIRouter, HTTPException
-from app.services import room_store, badge_store, alert_logic
+from fastapi import APIRouter, Depends, HTTPException
+from app.services.room_store import get_all_rooms, get_room_by_id
+from app.services.badge_store import get_badge_locations
 from app.models.room import Room
 from app.models.alert import Alert
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.database import get_db
 
 router = APIRouter()
 
 @router.get("/{room_id}")
-def get_room_signage(room_id: str):
-    room = room_store.get_room_by_id(room_id)
+async def get_room_signage(room_id: str, db: AsyncSession = Depends(get_db)):
+    room = await get_room_by_id(db, room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    # Get current staff in the room
-    badge_locations = badge_store.get_badge_locations()
+    badge_locations = await get_badge_locations(db)
     staff_in_room = [badge_id for badge_id, r_id in badge_locations.items() if r_id == room_id]
 
-    # Get alerts for this room
-    alerts = alert_logic.get_alert_history()
-    room_alerts = [a for a in alerts if a.room_id == room_id]
+    result = await db.execute(
+        "SELECT * FROM alerts WHERE room_id = :room_id",
+        {"room_id": room_id}
+    )
+    room_alerts = [Alert(**row) for row in result.mappings().all()]
 
     return {
         "room": room,
@@ -26,22 +30,19 @@ def get_room_signage(room_id: str):
     }
 
 @router.get("/all")
-def get_all_signage():
-    rooms = room_store.get_all_rooms()
-    badge_locations = badge_store.get_badge_locations()
-    alerts = alert_logic.get_alert_history()
+async def get_all_signage(db: AsyncSession = Depends(get_db)):
+    rooms = await get_all_rooms(db)
+    badge_locations = await get_badge_locations(db)
+    result = await db.execute("SELECT * FROM alerts")
+    alerts = [Alert(**row) for row in result.mappings().all()]
 
     signage_data = []
-
     for room in rooms:
         staff_in_room = [badge_id for badge_id, r_id in badge_locations.items() if r_id == room.id]
         room_alerts = [a for a in alerts if a.room_id == room.id]
-
         signage_data.append({
             "room": room,
             "staff": staff_in_room,
             "alerts": room_alerts
         })
-
     return signage_data
-
