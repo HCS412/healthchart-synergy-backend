@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from app.api import rooms, events, badges, alerts
 from app.database import Base, engine
+from app.api import signage
+
 
 app = FastAPI(
     title="HealthChart Synergy Backend",
