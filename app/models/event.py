@@ -28,4 +28,4 @@ class Event(BaseModel):
     timestamp: datetime = datetime.utcnow()
 
     class Config:
-        orm_mode = True
+        from_attributes = True
