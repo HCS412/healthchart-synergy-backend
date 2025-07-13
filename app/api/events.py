@@ -7,5 +7,5 @@ from app.database import get_db
 router = APIRouter()
 
 @router.post("/", tags=["EHR Events"])
-async def post_event(event: Event, db: AsyncSession = Depends(get_db), background_tasks: BackgroundTasks):
+async def post_event(event: Event, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     return await handle_event(event, db, background_tasks)
