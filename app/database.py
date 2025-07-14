@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     database_url: str
+    secret_key: str = "your-secret-key-here"  # Replace with a secure key in production
 
     class Config:
         env_file = ".env"
