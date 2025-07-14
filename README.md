@@ -35,32 +35,28 @@ app/
 │ ├── rooms.py
 │ ├── events.py
 │ ├── badges.py
-│ └── alerts.py
+│ ├── alerts.py
+│ ├── signage.py
 ├── models/ # Pydantic schemas
 │ ├── room.py
 │ ├── event.py
 │ ├── badge.py
-│ └── alert.py
+│ ├── alert.py
 ├── services/ # Business logic / state
 │ ├── room_store.py
 │ ├── badge_store.py
-│ └── alert_logic.py
-├── main.py # App entrypoint
-
-yaml
-Copy
-Edit
+│ ├── event_handler.py
+│ ├── fall_risk_alert.py
+│ ├── isolation_alert.py
+│ ├── alert_logic.py
+├── database.py
+├── main.py
 
 ---
 
 ## 🧪 Try It Live
 
-Visit `/docs` to explore and test endpoints with FastAPI's built-in Swagger UI:
-
-
-yaml
-Copy
-Edit
+Visit `/docs` to explore and test endpoints with FastAPI's built-in Swagger UI.
 
 ---
 
@@ -73,60 +69,48 @@ git clone https://github.com/your-username/healthchart-synergy-backend.git
 cd healthchart-synergy-backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
-🌐 Deployment
+```
+
+🌐 **Deployment**
+
 This project is deployed using Railway:
-
-Connect Railway to GitHub
-
-Add a Procfile:
-
-less
-Copy
-Edit
-web: uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
-Push to GitHub — Railway auto-builds + deploys
-
-✨ Future Roadmap
-Integration with Epic EHR (ADT webhook support)
-
-Postgres or Redis storage backend
-
-Real-time signage updates via WebSocket or MQTT
-
-BLE/NFC badge reader hardware integration
-
-Frontend dashboard for command center
-
-Admin login & audit logs
-
-👨‍⚕️ Pilot Focus
-This MVP targets a single hospital floor (12–20 rooms) and is optimized for:
-
-High-fidelity prototype demonstrations
-
-Safety-critical workflows (fall risk, isolation)
-
-Extensible architecture for future modules
-
-🤝 Contributing
-Fork this repo
-
-Use consistent code style (black, isort)
-
-Submit a PR with clear description
-
-📄 License
-MIT © 2025 HealthChart Synergy
-
-yaml
-Copy
-Edit
+- Connect Railway to GitHub
+- Add a Procfile:
+  ```
+  web: uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
+  ```
+- Push to GitHub — Railway auto-builds + deploys
 
 ---
 
-Let me know if you'd like:
-- A version with badges (e.g. Railway status, Python version)
-- To pin versions in `requirements.txt`
-- A shorter version for LinkedIn or product page use
+## ✨ Future Roadmap
 
-Ready to move forward to Phase 2?
+- Integration with Epic EHR (ADT webhook support)
+- Postgres or Redis storage backend
+- Real-time signage updates via WebSocket or MQTT
+- BLE/NFC badge reader hardware integration
+- Frontend dashboard for command center
+- Admin login & audit logs
+
+---
+
+## 👨‍⚕️ Pilot Focus
+
+This MVP targets a single hospital floor (12–20 rooms) and is optimized for:
+- High-fidelity prototype demonstrations
+- Safety-critical workflows (fall risk, isolation)
+- Extensible architecture for future modules
+
+---
+
+## 🤝 Contributing
+
+- Fork this repo
+- Use consistent code style (black, isort)
+- Submit a PR with clear description
+
+---
+
+## 📄 License
+
+MIT © 2025 HealthChart Synergy
