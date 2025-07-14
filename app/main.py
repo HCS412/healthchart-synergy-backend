@@ -3,6 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import Base, engine, get_db
 from app.api import rooms, events, badges, alerts, signage
+from app.auth import create_initial_users
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,8 +39,10 @@ async def on_startup():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created")
+        await create_initial_users()
+        logger.info("Initial users created")
     except Exception as e:
-        logger.error(f"Failed to create database tables: {e}")
+        logger.error(f"Failed to initialize database or users: {e}")
         raise
 
 app.include_router(rooms.router, prefix="/rooms", tags=["Rooms"])
