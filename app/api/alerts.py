@@ -8,7 +8,7 @@ from app.database import get_db
 router = APIRouter()
 
 @router.get("/", response_model=List[Alert])
-async def get_current_alerts(db: AsyncSession = Depends(get_db), background_tasks: BackgroundTasks):
+async def get_current_alerts(background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     return await scan_for_alerts(db, background_tasks)
 
 @router.get("/history", response_model=List[Alert])
