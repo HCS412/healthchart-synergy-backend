@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import Base, engine, get_db
+from app.database import Base, engine, get_db, AsyncSessionLocal
 from app.api import rooms, events, badges, alerts, signage
 from app.auth import create_initial_users
 
