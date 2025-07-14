@@ -39,7 +39,8 @@ async def on_startup():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created")
-        await create_initial_users()
+        async with AsyncSessionLocal() as db:
+            await create_initial_users(db)
         logger.info("Initial users created")
     except Exception as e:
         logger.error(f"Failed to initialize database or users: {e}")
