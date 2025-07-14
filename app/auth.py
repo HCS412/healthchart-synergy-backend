@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import text
 from app.database import get_db, settings
 from app.models.user import User, UserDB
 from typing import Optional
@@ -21,7 +22,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 async def create_initial_users(db: AsyncSession = Depends(get_db)):
     # Check if users exist
-    result = await db.execute("SELECT username FROM users WHERE username IN ('admin', 'nurse', 'signage')")
+    result = await db.execute(text("SELECT username FROM users WHERE username IN ('admin', 'nurse', 'signage')"))
     existing_users = {row["username"] for row in result.mappings().all()}
     
     # Create default users if they don't exist
@@ -63,7 +64,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     except JWTError:
         raise credentials_exception
     
-    result = await db.execute("SELECT * FROM users WHERE username = :username", {"username": username})
+    result = await db.execute(text("SELECT * FROM users WHERE username = :username"), {"username": username})
     user = result.mappings().first()
     if user is None:
         raise credentials_exception
