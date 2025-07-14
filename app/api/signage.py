@@ -5,11 +5,13 @@ from app.models.room import Room
 from app.models.alert import Alert
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
+from app.auth import get_current_user_with_role
+from app.models.user import User
 
 router = APIRouter()
 
 @router.get("/{room_id}")
-async def get_room_signage(room_id: str, db: AsyncSession = Depends(get_db)):
+async def get_room_signage(room_id: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_with_role("signage"))):
     room = await get_room_by_id(db, room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -30,7 +32,7 @@ async def get_room_signage(room_id: str, db: AsyncSession = Depends(get_db)):
     }
 
 @router.get("/all")
-async def get_all_signage(db: AsyncSession = Depends(get_db)):
+async def get_all_signage(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user_with_role("signage"))):
     rooms = await get_all_rooms(db)
     badge_locations = await get_badge_locations(db)
     result = await db.execute("SELECT * FROM alerts")
